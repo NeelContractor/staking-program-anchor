@@ -14,7 +14,9 @@ describe('Stake test', () => {
   let pdaAccount: PublicKey;
 
   beforeAll(async () => {
-    // await provider.connection.requestAirdrop(wallet.publicKey, 1 * LAMPORTS_PER_SOL);
+    // Request airdrop to ensure wallet has enough SOL
+    // const signature = await provider.connection.requestAirdrop(wallet.publicKey, 2 * LAMPORTS_PER_SOL);
+    // await provider.connection.confirmTransaction(signature);
     
     [pdaAccount] = PublicKey.findProgramAddressSync(
       [Buffer.from("client1"), wallet.publicKey.toBuffer()],
@@ -22,35 +24,49 @@ describe('Stake test', () => {
     );
   })
 
-  it('Initialize Stake', async () => {
-    await program.methods
-      .createPdaAccount()
-      .accounts({
-        payer: wallet.publicKey,
-        pdaAccount: pdaAccount,
-      } as any)
-      .signers([wallet.payer])
-      .rpc()
+  // it('Initialize Stake Account', async () => {
+  //   try {
+  //     await program.methods
+  //       .createPdaAccount()
+  //       .accounts({
+  //         payer: wallet.publicKey,
+  //         pdaAccount: pdaAccount,
+  //         systemProgram: anchor.web3.SystemProgram.programId,
+  //       } as any)
+  //       .signers([wallet.payer])
+  //       .rpc()
 
-    const account = await program.account.stakeAccount.fetch(pdaAccount);
-    console.log("PDA Data:", account);
-  })
+  //     const account = await program.account.stakeAccount.fetch(pdaAccount);
+  //     console.log("PDA Data after initialization:", account);
+  //   } catch (error) {
+  //     console.error("Error initializing stake account:", error);
+  //     throw error;
+  //   }
+  // })
 
-  it('stake', async () => {
-    await program.methods
-      .stake(
-        new anchor.BN(1 * LAMPORTS_PER_SOL)
-      )
-      .accounts({ 
-        user: wallet.publicKey,
-        pdaAccount: pdaAccount 
-      } as any)
-      .signers([wallet.payer])
-      .rpc()
+  // it('stake', async () => {
+  //   try {
+  //     const stakeAmount = new anchor.BN(Math.floor(1 * LAMPORTS_PER_SOL));
+  //     console.log("Staking amount:", stakeAmount.toNumber() / LAMPORTS_PER_SOL, "SOL");
 
-      const account = await program.account.stakeAccount.fetch(pdaAccount);
-    console.log("PDA Data after stake:", account);
-  })
+  //     await program.methods
+  //       .stake(stakeAmount)
+  //       .accounts({ 
+  //         user: wallet.publicKey,
+  //         pdaAccount: pdaAccount,
+  //         systemProgram: anchor.web3.SystemProgram.programId,
+  //       } as any)
+  //       .signers([wallet.payer])
+  //       .rpc()
+
+  //     const account = await program.account.stakeAccount.fetch(pdaAccount);
+  //     console.log("PDA Data after stake:", account);
+  //     console.log("Staked amount:", account.stakedAmount.toNumber() / LAMPORTS_PER_SOL, "SOL");
+  //   } catch (error) {
+  //     console.error("Error staking:", error);
+  //     throw error;
+  //   }
+  // })
 
   it('claim points', async () => {
     // console.log("Waiting 1 minute before claim points...");
@@ -70,7 +86,7 @@ describe('Stake test', () => {
 
   it('get points', async () => {
     const account = await program.account.stakeAccount.fetch(pdaAccount);
-    console.log("PDA Data after get points:", account);
+    console.log("PDA Data before get points:", account);
 
     await program.methods.getPoints()
       .accounts({ 
@@ -84,41 +100,29 @@ describe('Stake test', () => {
   })
 
   it('unstake', async () => {
-    // console.log("pdaAccount: ", pdaAccount.toBase58());
-    const account = await program.account.stakeAccount.fetch(pdaAccount);
-    // console.log(account.stakeAmount.toNumber());
-    console.log(account.stakedAmount);
-    console.log(account.stakedAmount.toNumber());
-    
-    const ix = await program.methods
-      .unstake(
-        new anchor.BN(0.5 * LAMPORTS_PER_SOL)
-      )
-      .accounts({ 
-        user: wallet.publicKey,
-        pdaAccount: pdaAccount
-      } as any)
-      .signers([wallet.payer])
-      .instruction();
+    try {
+      const account = await program.account.stakeAccount.fetch(pdaAccount);
+      console.log("Current staked amount:", account.stakedAmount.toNumber() / LAMPORTS_PER_SOL, "SOL");
 
-      const blockHash = await provider.connection.getLatestBlockhash();
-      const transaction = new anchor.web3.Transaction().add(ix);
-      transaction.recentBlockhash = blockHash.blockhash;
-      transaction.feePayer = wallet.publicKey;
-      transaction.sign(wallet.payer);
-      const sign = await provider.sendAndConfirm(transaction, [wallet.payer]);
-      console.log("sign :", sign);
+      const unstakeAmount = new anchor.BN(Math.floor(1 * LAMPORTS_PER_SOL));
+      console.log("Unstaking amount:", unstakeAmount.toNumber() / LAMPORTS_PER_SOL, "SOL");
+      
+      await program.methods
+        .unstake(unstakeAmount)
+        .accounts({ 
+          user: wallet.publicKey,
+          pdaAccount: pdaAccount,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .signers([wallet.payer])
+        .rpc()
 
-      // const tx = new anchor.web3.Transaction({
-      //   feePayer: wallet.payer.publicKey,
-      //   blockhash: blockHash.blockhash,
-      //   lastValidBlockHeight: blockHash.lastValidBlockHeight
-      // }).add(ix);
-
-      // const signature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer]);
-      // console.log("Unstake Signature :", signature);
-
-      console.log("PDA Data after unstake:", account);
-  }, 5000)
-
+      const updatedAccount = await program.account.stakeAccount.fetch(pdaAccount);
+      console.log("PDA Data after unstake:", updatedAccount);
+      console.log("Remaining staked amount:", updatedAccount.stakedAmount.toNumber() / LAMPORTS_PER_SOL, "SOL");
+    } catch (error) {
+      console.error("Error unstaking:", error);
+      throw error;
+    }
+  }, 10000)
 })

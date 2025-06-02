@@ -2,8 +2,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import WalletConnection from './WalletConnection';
-import StakingCard from './StakingCard';
+// import StakingCard from './StakingCard';
 import { Coins } from 'lucide-react';
+import TestingCard from './Testing';
 
 const StakingDashboard: React.FC = () => {
   return (
@@ -32,7 +33,8 @@ const StakingDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <StakingCard />
+          {/* <StakingCard /> removed this to test below component */}
+          <TestingCard /> {/* this test component works. so not using the above component. */}
         </motion.div>
       </main>
 

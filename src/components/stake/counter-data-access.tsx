@@ -2,7 +2,7 @@
 
 import { getStakeProgram, getStakeProgramId } from '@project/anchor'
 import { useConnection } from '@solana/wallet-adapter-react'
-import { Cluster, Keypair, PublicKey } from '@solana/web3.js'
+import { Cluster, PublicKey } from '@solana/web3.js'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
@@ -62,6 +62,7 @@ export function useStakeProgram() {
         .accounts({ 
           payer: payer,
           pdaAccount: pdaAccountPDA
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
         .signers([])
         .rpc()
@@ -107,6 +108,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .accounts({ 
           user: payer,
           pdaAccount: pdaAccountPDA
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
         .signers([])
         .rpc()
@@ -133,6 +135,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .accounts({ 
           user: payer,
           pdaAccount: pdaAccountPDA
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
         .signers([])
         .rpc()
@@ -157,6 +160,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .accounts({ 
           user: payer,
           pdaAccount: pdaAccountPDA
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
         .signers([])
         .rpc()
@@ -181,6 +185,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .accounts({ 
           user: payer,
           pdaAccount: pdaAccountPDA
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
         .signers([])
         .rpc()

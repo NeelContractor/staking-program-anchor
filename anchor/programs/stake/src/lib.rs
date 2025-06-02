@@ -2,7 +2,7 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
-use anchor_lang::system_program::Transfer;
+use anchor_lang::system_program::{Transfer, transfer};
 
 declare_id!("9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC");
 
@@ -12,8 +12,6 @@ const SECONDS_PER_DAY: u64 = 86_400;
 
 #[program]
 pub mod stake {
-
-    use anchor_lang::system_program::transfer;
 
     use super::*;
 
@@ -63,24 +61,16 @@ pub mod stake {
 
         update_points(pda_account, clock.unix_timestamp)?;
 
-        let user = ctx.accounts.user.key();
-        let seeds = &[
-            b"client1",
-            user.as_ref(),
-            &[pda_account.bump]
-        ];
+        msg!("Before: PDA: {}, User: {}", 
+            **pda_account.to_account_info().lamports.borrow(),
+            **ctx.accounts.user.to_account_info().lamports.borrow());
 
-        let signer_seeds = &[&seeds[..]];
+        **pda_account.to_account_info().lamports.borrow_mut() -= amount;
+        **ctx.accounts.user.to_account_info().lamports.borrow_mut() += amount;
 
-        let cpi_context = CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(), 
-            Transfer {
-                from: pda_account.to_account_info(),
-                to: ctx.accounts.user.to_account_info()
-            }, 
-            signer_seeds
-        );
-        transfer(cpi_context, amount)?;
+        msg!("After: PDA: {}, User: {}", 
+            **pda_account.to_account_info().lamports.borrow(),
+            **ctx.accounts.user.to_account_info().lamports.borrow());
 
         pda_account.staked_amount = pda_account.staked_amount.checked_sub(amount)
             .ok_or(StakeError::Underflow)?;
