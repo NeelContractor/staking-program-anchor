@@ -4,7 +4,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::Transfer;
 
-declare_id!("HYBGGNMBs7ZUjeE5YBHV6iuaduc3PQVeWEAMuACUdbWz");
+declare_id!("9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC");
 
 const POINTS_PER_SOL_PER_DAY: u64 = 1_000_000;
 const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
