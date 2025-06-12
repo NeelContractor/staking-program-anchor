@@ -193,7 +193,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .accounts({ 
           user: payer,
           pdaAccount: pdaAccountPDA,
-          mint: rewardMint,
+          rewardMint: rewardMint,
           mintAuthority: mintAuthority,
           userTokenAccount: userTokenAccountPDA,
           tokenProgram: TOKEN_PROGRAM_ID 
