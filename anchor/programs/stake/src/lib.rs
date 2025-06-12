@@ -3,11 +3,24 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_option::COption;
-use anchor_lang::system_program::{Transfer, transfer};
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_lang::system_program::{
+    Transfer, transfer,
+};
+use anchor_spl::{
+    metadata::{create_metadata_accounts_v3, CreateMetadataAccountsV3},
+    token::{Mint, Token, TokenAccount, mint_to, MintTo}
+};
 use mpl_token_metadata::ID as TOKEN_METADATA_ID;
-use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::types::{DataV2, Creator};
 
+#[constant]
+pub const NAME: &str = "Reward Token";
+
+#[constant]
+pub const SYMBOL: &str = "REWARD";
+
+#[constant]
+pub const URI: &str = "https://raw.githubusercontent.com/NeelContractor/Solana-Bootcamp-Projects/refs/heads/main/token-lottery/anchor/metadata.json";
 
 declare_id!("9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC");
 
@@ -17,10 +30,6 @@ const SECONDS_PER_DAY: u64 = 86_400;
 
 #[program]
 pub mod stake {
-
-
-    use anchor_spl::metadata::{create_metadata_accounts_v3, CreateMetadataAccountsV3};
-    use mpl_token_metadata::types::Creator;
 
     use super::*;
 
@@ -96,6 +105,24 @@ pub mod stake {
         let claimable_points = pda_account.total_points / 1_000_000;
         msg!("user has {} claimable points", claimable_points);
 
+        let mint_authority_bump = ctx.bumps.mint_authority;
+        let seeds: &[&[u8]] = &[
+            b"mint_authority",
+            &[mint_authority_bump]
+        ];
+        let signer_seeds = &[seeds];
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(), 
+            MintTo {
+                mint: ctx.accounts.reward_mint.to_account_info(),
+                to: ctx.accounts.user_token_account.to_account_info(),
+                authority: ctx.accounts.mint_authority.to_account_info()
+            }, 
+            signer_seeds
+        );
+        mint_to(cpi_ctx, claimable_points)?;
+
         pda_account.total_points = 0;
         Ok(())
     }
@@ -118,63 +145,51 @@ pub mod stake {
         Ok(())
     }
 
-    pub fn initialize_reward_mint(ctx: Context<InitializeRewardMint>, decimals: u8, name: String, symbol: String, uri: String) -> Result<()> {
-
-        //create metadata for the mint
-        let metadata_infos = vec![
-            ctx.accounts.metadata.to_account_infos(),
-            ctx.accounts.reward_mint.to_account_info(),
-            ctx.accounts.mint_authority.to_account_info(),
-            ctx.accounts.payer.to_account_infos(),
-            ctx.accounts.mint_authority.to_account_infos(),
-            ctx.accounts.system_program.to_account_infos(),
-            ctx.accounts.rent.to_account_infos()
-        ];
-
+    pub fn initialize_reward_mint(ctx: Context<InitializeRewardMint>) -> Result<()> {
         let creators = vec![
             Creator {
                 address: ctx.accounts.payer.key().clone(),
-                verified: true,
+                verified: false,
                 share: 100,
             },
         ];
 
         let data_v2 = DataV2 {
-            name,
-            symbol,
-            uri,
+            name: NAME.to_string(),
+            symbol: SYMBOL.to_string(),
+            uri: URI.to_string(),
             seller_fee_basis_points: 0,
             creators: Some(creators),
             collection: None,
             uses: None
         };
 
-        let instruction = create_metadata_accounts_v3(
-            CpiContext::new(
-                ctx.accounts.token_metadata_program.to_account_info(), 
-                CreateMetadataAccountsV3 {
-                    metadata: ctx.accounts.metadata.to_account_info(),
-                    mint: ctx.accounts.reward_mint.to_account_info(),
-                    mint_authority: ctx.accounts.mint_authority.to_account_info(),
-                    payer: ctx.accounts.payer.to_account_info(),
-                    update_authority: ctx.accounts.mint_authority.to_account_info(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
-                    rent: ctx.accounts.rent.to_account_info(),
-                }
-            ),
-            data_v2, 
-            true, 
-            true, 
-            None
+        let mint_authority_bump = ctx.bumps.mint_authority;
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"mint_authority",
+            &[mint_authority_bump]
+        ]];
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_metadata_program.to_account_info(), 
+            CreateMetadataAccountsV3 {
+                metadata: ctx.accounts.metadata.to_account_info(),
+                mint: ctx.accounts.reward_mint.to_account_info(),
+                mint_authority: ctx.accounts.mint_authority.to_account_info(),
+                payer: ctx.accounts.payer.to_account_info(),
+                update_authority: ctx.accounts.mint_authority.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            }, &signer_seeds
         );
 
+        create_metadata_accounts_v3(cpi_ctx, data_v2, true, true, None)?;
         Ok(())
     }
 
 }
 
 #[derive(Accounts)]
-#[instruction(decimals: u8, name: String, symbol: String, uri: String)]
 pub struct InitializeRewardMint<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -182,7 +197,7 @@ pub struct InitializeRewardMint<'info> {
     #[account(
         init,
         payer = payer,
-        mint::decimals = decimals,
+        mint::decimals = 2,
         mint::authority = mint_authority
     )]
     pub reward_mint: Account<'info, Mint>,
@@ -194,6 +209,7 @@ pub struct InitializeRewardMint<'info> {
     )]
     pub mint_authority: UncheckedAccount<'info>,
 
+    /// CHECK: This account will be initialized by the metaplex program
     #[account(
         mut, 
         seeds = [
@@ -285,8 +301,14 @@ pub struct ClaimPoints<'info> {
     )]
     pub mint_authority: UncheckedAccount<'info>,
 
+    #[account(
+        mut,
+        constraint = user_token_account.owner == user.key() @ StakeError::Unauthorized,
+        constraint = user_token_account.mint == reward_mint.key() @ StakeError::InvalidTokenAccount
+    )]
     pub user_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)] 
@@ -357,4 +379,6 @@ pub enum StakeError {
     InsufficientStake,
     #[msg("Invalid mint authority")]
     InvalidMintAuthority,
+    #[msg("Token Account is Invalid")]
+    InvalidTokenAccount,
 }
