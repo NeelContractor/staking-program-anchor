@@ -366,7 +366,7 @@ function StakeAccountCard({ account }: { account: PublicKey }) {
           loading={claim_points.isPending}
           icon={<Award className="mr-2 h-5 w-5" />}
           className="bg-gradient-to-r from-emerald-600 to-teal-600"
-          disabled={(accountQuery.data?.stakedAmount?.toNumber?.() ?? 0) <= 0}
+          disabled={claim_points.isPending} // (accountQuery.data?.stakedAmount?.toNumber?.() ?? 0) <= 0
         >
           Claim Points
         </ActionButton>

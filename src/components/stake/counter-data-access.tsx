@@ -2,7 +2,7 @@
 
 import { getStakeProgram, getStakeProgramId } from '@project/anchor'
 import { useConnection } from '@solana/wallet-adapter-react'
-import { Cluster, PublicKey } from '@solana/web3.js'
+import { Cluster, Keypair, PublicKey } from '@solana/web3.js'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
@@ -10,6 +10,11 @@ import { useAnchorProvider } from '../solana/solana-provider'
 import { useTransactionToast } from '../use-transaction-toast'
 import { toast } from 'sonner'
 import { BN } from 'bn.js'
+import { MPL_TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
+import { findAssociatedTokenPda } from "@solana-program/token";
+
+const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
 interface CreatePdaAccountProps {
   payer: PublicKey,
@@ -87,6 +92,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
   const { cluster } = useCluster()
   const transactionToast = useTransactionToast()
   const { program, accounts } = useStakeProgram()
+  const { connection } = useConnection()
 
   const accountQuery = useQuery({
     queryKey: ['stake_account', 'fetch', { cluster, account }],
@@ -150,6 +156,35 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
   const claim_points = useMutation<string, Error, ClaimPoints>({
     mutationKey: ['stake', 'claim', { cluster }],
     mutationFn: async({ payer }) => {
+      // Generate new keypair for each test to ensure fresh state
+      let rewardMint = new PublicKey("2TnAgxfwjBAQaywSXhPVnFmmFXqj6zQDmeAzdf17rV5b")
+      console.log("Reward mint:", rewardMint.toBase58());
+
+      // Derive mint authority PDA
+      let [mintAuthority] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mint_authority")],
+        program.programId
+      );
+      console.log("Mint authority:", mintAuthority.toBase58());
+
+      // FIXED: Use the same metadata account derivation as your Rust program
+      // Your program uses find_metadata_account function which derives from Metaplex program
+      let [metadataAccount] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID).toBuffer(),
+          rewardMint.toBuffer(),
+        ],
+        new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID)
+      );
+      console.log("Metadata account:", metadataAccount.toBase58());
+
+      const [userTokenAccountPDA] = PublicKey.findProgramAddressSync(
+        [payer.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), rewardMint.toBuffer()],
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      console.log("user ata: ", userTokenAccountPDA.toBase58());
+
       const pdaAccountPDA = await PublicKey.findProgramAddressSync(
         [Buffer.from("client1"), payer.toBuffer()],
         program.programId
@@ -159,10 +194,14 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         .claimPoints()
         .accounts({ 
           user: payer,
-          pdaAccount: pdaAccountPDA
+          pdaAccount: pdaAccountPDA,
+          mint: rewardMint,
+          mintAuthority: mintAuthority,
+          userTokenAccount: userTokenAccountPDA,
+          tokenProgram: TOKEN_PROGRAM_ID 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }as any)
-        .signers([])
+        // .signers([])
         .rpc()
     },
     onSuccess: (signature) => {
