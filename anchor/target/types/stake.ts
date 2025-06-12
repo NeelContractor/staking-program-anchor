@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/stake.json`.
  */
 export type Stake = {
-  "address": "9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC",
+  "address": "AkxFS5p822Mtx63CRXtKdsiUTgHHa9i27b7xWhjPfaKA",
   "metadata": {
     "name": "stake",
     "version": "0.1.0",
@@ -245,102 +245,7 @@ export type Stake = {
         },
         {
           "name": "metadata",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  109,
-                  101,
-                  116,
-                  97,
-                  100,
-                  97,
-                  116,
-                  97
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  11,
-                  112,
-                  101,
-                  177,
-                  227,
-                  209,
-                  124,
-                  69,
-                  56,
-                  157,
-                  82,
-                  127,
-                  107,
-                  4,
-                  195,
-                  205,
-                  88,
-                  184,
-                  108,
-                  115,
-                  26,
-                  160,
-                  253,
-                  181,
-                  73,
-                  182,
-                  209,
-                  188,
-                  3,
-                  248,
-                  41,
-                  70
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "rewardMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                11,
-                112,
-                101,
-                177,
-                227,
-                209,
-                124,
-                69,
-                56,
-                157,
-                82,
-                127,
-                107,
-                4,
-                195,
-                205,
-                88,
-                184,
-                108,
-                115,
-                26,
-                160,
-                253,
-                181,
-                73,
-                182,
-                209,
-                188,
-                3,
-                248,
-                41,
-                70
-              ]
-            }
-          }
+          "writable": true
         },
         {
           "name": "tokenMetadataProgram",
@@ -571,7 +476,7 @@ export type Stake = {
     {
       "name": "uri",
       "type": "string",
-      "value": "\"https://raw.githubusercontent.com/NeelContractor/Solana-Bootcamp-Projects/refs/heads/main/token-lottery/anchor/metadata.json\""
+      "value": "\"https://raw.githubusercontent.com/NeelContractor/staking-program-anchor/refs/heads/main/anchor/metadata.json\""
     }
   ]
 };

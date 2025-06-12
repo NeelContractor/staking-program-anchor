@@ -21,7 +21,7 @@ export function getStakeProgramId(cluster: Cluster) {
     case 'devnet':
     case 'testnet':
       // This is the program ID for the Counter program on devnet and testnet.
-      return new PublicKey('9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC')
+      return new PublicKey('AkxFS5p822Mtx63CRXtKdsiUTgHHa9i27b7xWhjPfaKA')
     case 'mainnet-beta':
     default:
       return STAKE_PROGRAM_ID

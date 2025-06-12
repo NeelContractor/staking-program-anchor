@@ -20,9 +20,9 @@ pub const NAME: &str = "Reward Token";
 pub const SYMBOL: &str = "REWARD";
 
 #[constant]
-pub const URI: &str = "https://raw.githubusercontent.com/NeelContractor/Solana-Bootcamp-Projects/refs/heads/main/token-lottery/anchor/metadata.json";
+pub const URI: &str = "https://raw.githubusercontent.com/NeelContractor/staking-program-anchor/refs/heads/main/anchor/metadata.json";
 
-declare_id!("9dAhsicM6p9GFKcGoTJyzE2G3Lznc5agHgWpuxoPQpFC");
+declare_id!("AkxFS5p822Mtx63CRXtKdsiUTgHHa9i27b7xWhjPfaKA");
 
 const POINTS_PER_SOL_PER_DAY: u64 = 1_000_000;
 const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
@@ -212,13 +212,7 @@ pub struct InitializeRewardMint<'info> {
     /// CHECK: This account will be initialized by the metaplex program
     #[account(
         mut, 
-        seeds = [
-            b"metadata",
-            TOKEN_METADATA_ID.as_ref(),
-            reward_mint.key().as_ref()
-        ],
-        bump,
-        seeds::program = TOKEN_METADATA_ID
+        address = find_metadata_account(&reward_mint.key()).0
     )]
     pub metadata: UncheckedAccount<'info>,
 
@@ -350,6 +344,17 @@ fn calculate_points_earned(staked_amount: u64, time_elapsed_seconds: u64) -> Res
         .ok_or(StakeError::Overflow)?;
 
     Ok(points as u64)
+}
+
+pub fn find_metadata_account(mint: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            b"metadata",
+            &mpl_token_metadata::ID.to_bytes(),
+            &mint.to_bytes(),
+        ],
+        &mpl_token_metadata::ID,
+    )
 }
 
 #[account]
