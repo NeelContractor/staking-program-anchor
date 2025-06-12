@@ -2,7 +2,7 @@
 
 import { getStakeProgram, getStakeProgramId } from '@project/anchor'
 import { useConnection } from '@solana/wallet-adapter-react'
-import { Cluster, Keypair, PublicKey } from '@solana/web3.js'
+import { Cluster, PublicKey } from '@solana/web3.js'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
@@ -11,7 +11,6 @@ import { useTransactionToast } from '../use-transaction-toast'
 import { toast } from 'sonner'
 import { BN } from 'bn.js'
 import { MPL_TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata'
-import { findAssociatedTokenPda } from "@solana-program/token";
 
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
@@ -92,7 +91,6 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
   const { cluster } = useCluster()
   const transactionToast = useTransactionToast()
   const { program, accounts } = useStakeProgram()
-  const { connection } = useConnection()
 
   const accountQuery = useQuery({
     queryKey: ['stake_account', 'fetch', { cluster, account }],
@@ -157,11 +155,11 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
     mutationKey: ['stake', 'claim', { cluster }],
     mutationFn: async({ payer }) => {
       // Generate new keypair for each test to ensure fresh state
-      let rewardMint = new PublicKey("2TnAgxfwjBAQaywSXhPVnFmmFXqj6zQDmeAzdf17rV5b")
+      const rewardMint = new PublicKey("2TnAgxfwjBAQaywSXhPVnFmmFXqj6zQDmeAzdf17rV5b")
       console.log("Reward mint:", rewardMint.toBase58());
 
       // Derive mint authority PDA
-      let [mintAuthority] = PublicKey.findProgramAddressSync(
+      const [mintAuthority] = PublicKey.findProgramAddressSync(
         [Buffer.from("mint_authority")],
         program.programId
       );
@@ -169,7 +167,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
 
       // FIXED: Use the same metadata account derivation as your Rust program
       // Your program uses find_metadata_account function which derives from Metaplex program
-      let [metadataAccount] = PublicKey.findProgramAddressSync(
+      const [metadataAccount] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("metadata"),
           new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID).toBuffer(),
