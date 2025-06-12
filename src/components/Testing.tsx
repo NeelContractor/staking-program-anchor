@@ -195,7 +195,7 @@ const TestingCard: React.FC = () => {
 
 function StakeAccountCard({ account }: { account: PublicKey }) {
   const [stakeAmount, setStakeAmount] = useState<number>(0);
-  const { publicKey } = useWallet();
+  const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
   const [unstakeAmount, setUnstakeAmount] = useState<number>(0);
   const [balance, setBalance] = useState<number>();
@@ -268,7 +268,7 @@ function StakeAccountCard({ account }: { account: PublicKey }) {
     if (!publicKey) return;
 
     try {
-      const success = await claim_points.mutateAsync({ payer: publicKey });
+      const success = await claim_points.mutateAsync({ payer: publicKey, signTransaction });
       if (success) {
         showNotification('Successfully claimed points', 'success');
       } else {

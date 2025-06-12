@@ -2,7 +2,8 @@
 
 import { getStakeProgram, getStakeProgramId } from '@project/anchor'
 import { useConnection } from '@solana/wallet-adapter-react'
-import { Cluster, PublicKey } from '@solana/web3.js'
+import { Cluster, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
+import { createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
@@ -20,6 +21,7 @@ interface CreatePdaAccountProps {
 }
 interface ClaimPoints {
   payer: PublicKey,
+  signTransaction: (<T extends Transaction | VersionedTransaction>(transaction: T) => Promise<T>) | undefined
 }
 interface GetPoints {
   payer: PublicKey,
@@ -153,7 +155,7 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
 
   const claim_points = useMutation<string, Error, ClaimPoints>({
     mutationKey: ['stake', 'claim', { cluster }],
-    mutationFn: async({ payer }) => {
+    mutationFn: async({ payer, signTransaction }) => {
       // Generate new keypair for each test to ensure fresh state
       const rewardMint = new PublicKey("2TnAgxfwjBAQaywSXhPVnFmmFXqj6zQDmeAzdf17rV5b")
       console.log("Reward mint:", rewardMint.toBase58());
@@ -188,25 +190,77 @@ export function useStakeProgramAccount({ account }: { account: PublicKey }) {
         program.programId
       )[0];
 
-      return program.methods
-        .claimPoints()
-        .accounts({ 
-          user: payer,
-          pdaAccount: pdaAccountPDA,
-          rewardMint: rewardMint,
-          mintAuthority: mintAuthority,
-          userTokenAccount: userTokenAccountPDA,
-          tokenProgram: TOKEN_PROGRAM_ID 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        }as any)
-        // .signers([])
-        .rpc()
+      // Check if ATA exists, if not create it
+      const connection = program.provider.connection;
+      const ataInfo = await connection.getAccountInfo(userTokenAccountPDA);
+
+      if (!ataInfo) {
+        console.log("Creating ATA for user...");
+        // Create the ATA first
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          payer, // payer
+          userTokenAccountPDA, // ata
+          payer, // owner
+          rewardMint // mint
+        );
+  
+        // Build transaction with ATA creation + claim points
+        const transaction = new Transaction();
+        transaction.add(createAtaIx);
+        
+        // Add your claim points instruction
+        const claimIx = await program.methods
+          .claimPoints()
+          .accounts({ 
+            user: payer,
+            pdaAccount: pdaAccountPDA,
+            rewardMint: rewardMint,
+            mintAuthority: mintAuthority,
+            userTokenAccount: userTokenAccountPDA,
+            tokenProgram: TOKEN_PROGRAM_ID 
+          } as any)
+          .instruction();
+        
+          const { blockhash } = await connection.getLatestBlockhash();
+        transaction.add(claimIx);
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = payer
+  
+        // Send the combined transaction
+        // const signature = await connection.sendRawTransaction(transaction.serialize());
+        if (!signTransaction) {
+          throw new Error('signTransaction function is required to sign the transaction.');
+        }
+
+        const signedTx = await signTransaction(transaction);
+        const rawTx = signedTx.serialize();
+        const signature = await connection.sendRawTransaction(rawTx);
+        console.log("done");
+        return signature;
+      } else {
+        console.log("ATA already exists, proceeding with claim...");
+        // ATA exists, proceed normally
+        return program.methods
+          .claimPoints()
+          .accounts({ 
+            user: payer,
+            pdaAccount: pdaAccountPDA,
+            rewardMint: rewardMint,
+            mintAuthority: mintAuthority,
+            userTokenAccount: userTokenAccountPDA,
+            tokenProgram: TOKEN_PROGRAM_ID 
+          } as any)
+          .rpc();
+      }
     },
     onSuccess: (signature) => {
       transactionToast(signature)
       return accounts.refetch()
     },
-    onError: () => toast.error('Failed to claim points.'),
+    onError: (error) => {
+      console.error("Claim points error:", error);
+      toast.error('Failed to claim points.');
+    },
   })
 
   const get_points = useMutation<string, Error, GetPoints>({
