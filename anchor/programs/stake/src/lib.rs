@@ -121,7 +121,9 @@ pub mod stake {
             }, 
             signer_seeds
         );
-        mint_to(cpi_ctx, claimable_points)?;
+        msg!("Minting {} tokens to user {}", claimable_points, ctx.accounts.user.key());
+        let mint_result = mint_to(cpi_ctx, claimable_points)?;
+        msg!("Mint result: {:?}", mint_result);
 
         pda_account.total_points = 0;
         Ok(())
